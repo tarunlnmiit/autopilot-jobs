@@ -4,10 +4,9 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from openai import OpenAI
 from tinyfish import RateLimitError, TinyFish
 
-from job_hunt.llm_utils import chat_with_fallback
+from job_hunt.llm_utils import chat_with_llm
 from job_hunt.notifier import send_telegram
 
 STATE_FILE = Path("state/seen_jobs.json")
@@ -218,7 +217,7 @@ def fetch_job_details(tf: TinyFish, jobs: list[dict]) -> list[dict]:
     return enriched
 
 
-def score_jobs(llm: OpenAI, jobs: list[dict], resume: str, config: dict) -> list[dict]:
+def score_jobs(jobs: list[dict], resume: str, config: dict) -> list[dict]:
     if not jobs:
         return []
 
@@ -240,8 +239,8 @@ def score_jobs(llm: OpenAI, jobs: list[dict], resume: str, config: dict) -> list
     )
 
     try:
-        raw = chat_with_fallback(
-            llm, config,
+        raw = chat_with_llm(
+            config,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.1,
         )
@@ -295,15 +294,6 @@ def run_scan(config: dict, companies: list[dict]) -> None:
         print(f"TinyFish init error: {e}")
         return
 
-    try:
-        llm = OpenAI(
-            api_key=config["openrouter_api_key"],
-            base_url="https://openrouter.ai/api/v1",
-        )
-    except Exception as e:
-        print(f"OpenRouter init error: {e}")
-        return
-
     resume_path = Path(config.get("candidate", {}).get("resume_path", "resume/YOUR_RESUME.md"))
     resume = resume_path.read_text()
     min_score = config.get("candidate", {}).get("min_score", 55)
@@ -331,7 +321,7 @@ def run_scan(config: dict, companies: list[dict]) -> None:
             try:
                 for i in range(0, len(new_jobs), 10):
                     batch = new_jobs[i : i + 10]
-                    batch_scored = score_jobs(llm, batch, resume, config)
+                    batch_scored = score_jobs(batch, resume, config)
                     scored.extend(batch_scored)
             except Exception as score_err:
                 print(f"  Scoring failed: {score_err}")

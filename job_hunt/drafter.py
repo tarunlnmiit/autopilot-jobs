@@ -3,10 +3,9 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from openai import OpenAI
 from tinyfish import TinyFish
 
-from job_hunt.llm_utils import chat_with_fallback
+from job_hunt.llm_utils import chat_with_llm
 
 LAST_SCAN_FILE = Path("state/last_scan.json")
 OUTPUT_DIR = Path("output")
@@ -35,10 +34,6 @@ def _resolve_job(job_ref: str) -> tuple[str, str]:
 
 def draft_application(config: dict, job_ref: str) -> None:
     tf = TinyFish(api_key=config["tinyfish_api_key"])
-    llm = OpenAI(
-        api_key=config["openrouter_api_key"],
-        base_url="https://openrouter.ai/api/v1",
-    )
 
     cand = config.get("candidate", {})
     candidate_name = cand.get("name", "the candidate")
@@ -62,8 +57,8 @@ def draft_application(config: dict, job_ref: str) -> None:
 
     # 1. Tailored resume
     print("Tailoring resume...")
-    resume_md = chat_with_fallback(
-        llm, config,
+    resume_md = chat_with_llm(
+        config,
         messages=[{"role": "user", "content": f"""Rewrite the resume below to mirror the language and emphasized skills in this job description.
 
 Rules:
@@ -89,8 +84,8 @@ Output ONLY the tailored resume in Markdown. No preamble."""}],
     # 2. Cover letter
     print("Drafting cover letter...")
     relocation_line = f"- {relocation_note}" if relocation_note else ""
-    cover_md = chat_with_fallback(
-        llm, config,
+    cover_md = chat_with_llm(
+        config,
         messages=[{"role": "user", "content": f"""Write a one-page cover letter for {candidate_name} applying to this role.
 
 Rules:
@@ -117,8 +112,8 @@ Output ONLY the cover letter. No preamble."""}],
 
     # 3. Application info
     print("Extracting application info...")
-    info_txt = chat_with_fallback(
-        llm, config,
+    info_txt = chat_with_llm(
+        config,
         messages=[{"role": "user", "content": f"""Extract from this job posting (plain text output, clear labels):
 
 1. Application URL or email

@@ -70,6 +70,37 @@ A nightly scan uses approximately **5–15 LLM calls** (jobs are scored in batch
 
 ---
 
+### Claude / Anthropic (optional — alternative to OpenRouter)
+
+<details>
+<summary>Use Claude as your LLM instead of OpenRouter — click to expand</summary>
+
+If you have an Anthropic API key or Claude Pro, you can skip OpenRouter entirely.
+
+1. Get an API key at [console.anthropic.com](https://console.anthropic.com)
+2. Install the Claude extra:
+   ```bash
+   pip install 'autopilot-jobs[claude]'
+   ```
+3. In `config.json`, set:
+   ```json
+   "llm_provider": "anthropic",
+   "anthropic_api_key": "sk-ant-...",
+   "anthropic_model": "claude-haiku-4-5-20251001"
+   ```
+
+Recommended models:
+- `claude-haiku-4-5-20251001` — fast and affordable, handles JSON scoring well
+- `claude-sonnet-4-6` — higher quality scores, higher cost
+
+> [!TIP]
+> Leave `openrouter_api_key` empty if using Claude — the field is ignored when
+> `llm_provider` is set to `"anthropic"`.
+
+</details>
+
+---
+
 ### Telegram (optional)
 
 <details>

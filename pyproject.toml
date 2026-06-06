@@ -25,6 +25,7 @@ dependencies = [
 
 [project.optional-dependencies]
 mcp = ["mcp>=1.0.0"]
+claude = ["anthropic>=0.30.0"]
 dev = ["pytest>=8.0", "ruff>=0.4"]
 
 [project.scripts]

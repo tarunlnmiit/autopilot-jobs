@@ -1,5 +1,6 @@
 {
   "tinyfish_api_key": "YOUR_TINYFISH_API_KEY",
+  "llm_provider": "openrouter",
   "openrouter_api_key": "YOUR_OPENROUTER_API_KEY",
   "openrouter_model": "meta-llama/llama-3.3-70b-instruct:free",
   "openrouter_fallback_models": [
@@ -7,6 +8,8 @@
     "google/gemma-4-31b-it:free",
     "qwen/qwen3-coder:free"
   ],
+  "anthropic_api_key": "YOUR_ANTHROPIC_API_KEY",
+  "anthropic_model": "claude-haiku-4-5-20251001",
   "telegram": {
     "token": "YOUR_TELEGRAM_BOT_TOKEN",
     "chat_id": "YOUR_TELEGRAM_CHAT_ID"

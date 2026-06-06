@@ -32,12 +32,28 @@ On demand:
 
 ---
 
+## Usage modes
+
+```
+Mode 1: Standalone CLI (no Claude Code required)
+  pip install autopilot-jobs
+  autopilot scan / autopilot draft 1 / autopilot export
+
+Mode 2: Claude Code MCP (control via natural language)
+  pip install 'autopilot-jobs[mcp]'
+  claude mcp add autopilot-jobs ...
+  → "Scan for ML jobs" / "Draft application for job #2"
+```
+
+Both modes use the same config and produce the same output.
+
 ## Quick start
 
 ```bash
 git clone https://github.com/tarunlnmiit/autopilot-jobs.git
 cd autopilot-jobs
-pip install -e '.[mcp]'
+pip install -e '.'               # standalone CLI
+# pip install -e '.[mcp]'       # + Claude Code MCP integration
 cp config.example.json config.json && cp .env.example .env
 # Fill in your API keys and candidate profile, then:
 autopilot scan
@@ -174,9 +190,11 @@ autopilot-jobs/
 
 ---
 
-## LLM models used (all free)
+## LLM options
 
-The tool uses [OpenRouter](https://openrouter.ai) with a fallback chain of free models:
+### Default: OpenRouter (free)
+
+Uses a 4-model fallback chain — all free, no credit card needed:
 
 | Model | Role |
 |---|---|
@@ -185,7 +203,25 @@ The tool uses [OpenRouter](https://openrouter.ai) with a fallback chain of free 
 | `google/gemma-4-31b-it:free` | Fallback 2 |
 | `qwen/qwen3-coder:free` | Fallback 3 |
 
-If one model hits its daily free-tier quota, the tool automatically tries the next. **Zero LLM cost by default.** A nightly scan uses ~5–15 LLM calls total (jobs scored in batches).
+If one model hits its daily free-tier quota, the tool automatically tries the next. **Zero LLM cost by default.**
+
+### Alternative: Claude (Anthropic)
+
+If you have an Anthropic API key or Claude Pro:
+
+```bash
+pip install 'autopilot-jobs[claude]'
+```
+
+In `config.json`:
+
+```json
+"llm_provider": "anthropic",
+"anthropic_api_key": "sk-ant-...",
+"anthropic_model": "claude-haiku-4-5-20251001"
+```
+
+`claude-haiku-4-5-20251001` is fast and cheap; `claude-sonnet-4-6` gives higher quality scores. A nightly scan uses ~5–15 LLM calls total (jobs scored in batches of 10).
 
 ---
 
