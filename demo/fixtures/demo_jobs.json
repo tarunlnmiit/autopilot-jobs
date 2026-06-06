@@ -1,0 +1,72 @@
+[
+  {
+    "url": "https://stripe.com/jobs/listing/senior-ml-engineer-risk/5001",
+    "title": "Senior ML Engineer, Risk",
+    "company": "Stripe",
+    "location": "Remote / San Francisco, CA",
+    "region": "Remote",
+    "score": 91,
+    "extracted_title": "Senior ML Engineer, Risk & Fraud",
+    "stack": "Python, PyTorch, Kafka, Spark, AWS",
+    "location_remote": "Remote / San Francisco, CA",
+    "reason": "Strong overlap with candidate's ML production experience and Python stack",
+    "worth_applying": true,
+    "scan_date": "2025-06-06"
+  },
+  {
+    "url": "https://huggingface.co/jobs/research-engineer",
+    "title": "Research Engineer, LLMs",
+    "company": "Hugging Face",
+    "location": "Paris, France / Remote",
+    "region": "EU",
+    "score": 88,
+    "extracted_title": "Research Engineer, Large Language Models",
+    "stack": "PyTorch, Transformers, CUDA, Python",
+    "location_remote": "Remote (EU preferred)",
+    "reason": "Direct match on LLM fine-tuning and open-source model work",
+    "worth_applying": true,
+    "scan_date": "2025-06-06"
+  },
+  {
+    "url": "https://lifeatspotify.com/jobs/ml-platform-engineer",
+    "title": "ML Platform Engineer",
+    "company": "Spotify",
+    "location": "Stockholm, Sweden",
+    "region": "EU",
+    "score": 82,
+    "extracted_title": "ML Platform Engineer (MLOps)",
+    "stack": "Python, Kubeflow, Feast, GCP, Terraform",
+    "location_remote": "Stockholm, Sweden (hybrid)",
+    "reason": "Good MLOps fit; Kubeflow differs from candidate's AWS-heavy background",
+    "worth_applying": true,
+    "scan_date": "2025-06-06"
+  },
+  {
+    "url": "https://mistral.ai/careers/applied-scientist",
+    "title": "Applied Scientist",
+    "company": "Mistral AI",
+    "location": "Paris, France",
+    "region": "EU",
+    "score": 79,
+    "extracted_title": "Applied Scientist, NLP",
+    "stack": "Python, PyTorch, RLHF, distributed training",
+    "location_remote": "Paris, France (on-site)",
+    "reason": "Strong NLP/LLM alignment but requires on-site Paris commitment",
+    "worth_applying": true,
+    "scan_date": "2025-06-06"
+  },
+  {
+    "url": "https://wise.jobs/listing/senior-data-scientist-growth",
+    "title": "Senior Data Scientist, Growth",
+    "company": "Wise",
+    "location": "London, UK / Tallinn, Estonia / Remote",
+    "region": "EU",
+    "score": 74,
+    "extracted_title": "Senior Data Scientist, Growth",
+    "stack": "Python, SQL, Spark, Redshift, A/B testing",
+    "location_remote": "Remote (EU timezone)",
+    "reason": "Good stats/experimentation fit but heavier on analytics than ML engineering",
+    "worth_applying": true,
+    "scan_date": "2025-06-06"
+  }
+]

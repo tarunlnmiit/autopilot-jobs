@@ -1,0 +1,33 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Secrets — NEVER commit
+.env
+
+# Runtime state — personal data
+state/*.json
+output/
+scan.log
+*.log
+
+# Personal resume — add your own, never commit
+resume/*.md
+!resume/YOUR_RESUME.md
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Claude Code project config
+.claude/
+
+# graphify knowledge graph
+graphify-out/

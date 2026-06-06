@@ -1,0 +1,7 @@
+[
+  { "name": "Stripe", "careers_url": "https://stripe.com/jobs", "search_domain": "stripe.com", "location": "Remote / San Francisco, CA", "region": "Remote" },
+  { "name": "Hugging Face", "careers_url": "https://huggingface.co/jobs", "search_domain": "huggingface.co", "location": "Paris, France / Remote", "region": "EU" },
+  { "name": "Spotify", "careers_url": "https://www.lifeatspotify.com/jobs", "search_domain": "lifeatspotify.com", "location": "Stockholm, Sweden", "region": "EU" },
+  { "name": "Mistral AI", "careers_url": "https://mistral.ai/careers/", "search_domain": "mistral.ai", "location": "Paris, France", "region": "EU" },
+  { "name": "Wise", "careers_url": "https://www.wise.jobs/", "search_domain": "wise.jobs", "location": "London, UK / Tallinn, Estonia / Remote", "region": "EU" }
+]

@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "autopilot-jobs"
+version = "0.1.0"
+description = "AI-powered job scanner, scorer, and application drafter. Finds jobs while you sleep."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+keywords = ["job-search", "ai", "automation", "mcp", "llm", "openrouter"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Office/Business",
+]
+dependencies = [
+    "tinyfish>=0.2.5",
+    "openai>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+mcp = ["mcp>=1.0.0"]
+dev = ["pytest>=8.0", "ruff>=0.4"]
+
+[project.scripts]
+autopilot = "job_hunt.main:main"
+
+[project.urls]
+Homepage = "https://github.com/tarunlnmiit/autopilot-jobs"
+Repository = "https://github.com/tarunlnmiit/autopilot-jobs"
+Issues = "https://github.com/tarunlnmiit/autopilot-jobs/issues"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["job_hunt"]
