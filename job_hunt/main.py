@@ -20,8 +20,19 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
+_PLACEHOLDERS = {
+    "YOUR_TINYFISH_API_KEY", "your_tinyfish_api_key_here",
+    "YOUR_OPENROUTER_API_KEY", "your_openrouter_api_key_here",
+    "YOUR_ANTHROPIC_API_KEY", "your_anthropic_api_key_here",
+}
+
+
+def _is_placeholder(val: str) -> bool:
+    return val in _PLACEHOLDERS or val.startswith("YOUR_") or val.endswith("_HERE") or val.endswith("_here")
+
+
 def load_config() -> dict:
-    load_dotenv()
+    load_dotenv(dotenv_path=Path(".env"), override=True)
     p = Path("config.json")
     if not p.exists():
         sys.exit("config.json not found.\nRun 'autopilot init' to set up your working directory.")
@@ -42,6 +53,14 @@ def load_config() -> dict:
                 config[config_key] = [m.strip() for m in val.split(",")]
             else:
                 config[config_key] = val
+
+    tinyfish_key = config.get("tinyfish_api_key", "")
+    if not tinyfish_key or _is_placeholder(tinyfish_key):
+        sys.exit(
+            "TINYFISH_API_KEY not set.\n"
+            "Add it to your .env file: TINYFISH_API_KEY=sk-tinyfish-...\n"
+            "Get a key at https://agent.tinyfish.ai"
+        )
 
     tg_token = os.getenv("TELEGRAM_TOKEN")
     tg_chat_id = os.getenv("TELEGRAM_CHAT_ID")

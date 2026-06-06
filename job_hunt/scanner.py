@@ -369,7 +369,7 @@ def run_scan(config: dict, companies: list[dict]) -> None:
         try:
             new_jobs = discover_job_urls(tf, company, seen_urls)
             if not new_jobs:
-                logger.info(f"  No new job URLs found")
+                logger.info("  No new job URLs found")
                 companies_scanned += 1
                 continue
 
