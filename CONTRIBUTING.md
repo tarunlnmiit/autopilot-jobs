@@ -1,4 +1,4 @@
-# Contributing to autopilot-jobs
+# Contributing to autopilot-jobhunt
 
 Thanks for wanting to contribute. Here's what's most useful:
 
@@ -45,8 +45,8 @@ If you find the LLM scores inaccurately, open an issue with:
 ## Development setup
 
 ```bash
-git clone https://github.com/tarunlnmiit/autopilot-jobs.git
-cd autopilot-jobs
+git clone https://github.com/tarunlnmiit/autopilot-jobhunt.git
+cd autopilot-jobhunt
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 ```

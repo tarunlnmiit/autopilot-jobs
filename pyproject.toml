@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "autopilot-jobs"
+name = "autopilot-jobhunt"
 version = "0.1.0"
 description = "AI-powered job scanner, scorer, and application drafter. Finds jobs while you sleep."
 readme = "README.md"
@@ -32,9 +32,9 @@ dev = ["pytest>=8.0", "ruff>=0.4"]
 autopilot = "job_hunt.main:main"
 
 [project.urls]
-Homepage = "https://github.com/tarunlnmiit/autopilot-jobs"
-Repository = "https://github.com/tarunlnmiit/autopilot-jobs"
-Issues = "https://github.com/tarunlnmiit/autopilot-jobs/issues"
+Homepage = "https://github.com/tarunlnmiit/autopilot-jobhunt"
+Repository = "https://github.com/tarunlnmiit/autopilot-jobhunt"
+Issues = "https://github.com/tarunlnmiit/autopilot-jobhunt/issues"
 
 [tool.ruff]
 line-length = 100

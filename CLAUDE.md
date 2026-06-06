@@ -1,4 +1,4 @@
-# autopilot-jobs
+# autopilot-jobhunt
 
 AI job agent: scans 130+ company careers pages nightly, scores every role against your resume with an LLM (0–100), sends top matches via Telegram, and drafts tailored cover letters + resume bullets on demand.
 
@@ -49,11 +49,11 @@ See [SETUP.md §7](SETUP.md#step-7--register-with-claude-code-mcp) for the full 
 
 Quick reference:
 ```bash
-claude mcp add autopilot-jobs \
+claude mcp add autopilot-jobhunt \
   --env TINYFISH_API_KEY=your_key \
   --env OPENROUTER_API_KEY=your_key \
   -- python -m job_hunt.mcp_server
-# Then add "cwd": "/path/to/autopilot-jobs" in ~/.claude.json
+# Then add "cwd": "/path/to/autopilot-jobhunt" in ~/.claude.json
 ```
 
 MCP tools exposed: `scan_jobs`, `draft_application(job_ref)`, `export_jobs(min_score, days)`

@@ -27,5 +27,5 @@ $DEMO_PYTHON "$DEMO_SCRIPT" export
 
 sleep 1
 echo ""
-echo "Done. Star the repo → github.com/tarunlnmiit/autopilot-jobs"
+echo "Done. Star the repo → github.com/tarunlnmiit/autopilot-jobhunt"
 sleep 2

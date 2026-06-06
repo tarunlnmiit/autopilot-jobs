@@ -1,4 +1,4 @@
-# Setting Up autopilot-jobs
+# Setting Up autopilot-jobhunt
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue)](https://www.python.org/)
 [![Free APIs](https://img.shields.io/badge/APIs-free%20tier-brightgreen)](#step-1--get-your-api-keys)
@@ -50,7 +50,7 @@ If Python is below 3.11, install via [pyenv](https://github.com/pyenv/pyenv) or 
 2. **Keys** → **Create key**
 3. Copy the key (starts with `sk-or-v1-…`)
 
-autopilot-jobs uses a 4-model fallback chain — all free:
+autopilot-jobhunt uses a 4-model fallback chain — all free:
 
 | Model | Role | Characteristic |
 |---|---|---|
@@ -80,7 +80,7 @@ If you have an Anthropic API key or Claude Pro, you can skip OpenRouter entirely
 1. Get an API key at [console.anthropic.com](https://console.anthropic.com)
 2. Install the Claude extra:
    ```bash
-   pip install 'autopilot-jobs[claude]'
+   pip install 'autopilot-jobhunt[claude]'
    ```
 3. In `config.json`, set:
    ```json
@@ -106,7 +106,7 @@ Recommended models:
 <details>
 <summary>Set up Telegram notifications — click to expand</summary>
 
-Telegram lets autopilot-jobs message you the top job matches immediately after each scan.
+Telegram lets autopilot-jobhunt message you the top job matches immediately after each scan.
 
 1. Open Telegram and message **@BotFather**
 2. Send `/newbot` and follow the prompts
@@ -126,14 +126,14 @@ You'll add both values to `.env` in Step 5.
 ## Step 2 — Clone and install
 
 ```bash
-git clone https://github.com/tarunlnmiit/autopilot-jobs.git
-cd autopilot-jobs
+git clone https://github.com/tarunlnmiit/autopilot-jobhunt.git
+cd autopilot-jobhunt
 pip install -e '.[mcp]'
 ```
 
 ✅ **Expected last line:**
 ```
-Successfully installed autopilot-jobs-0.1.0
+Successfully installed autopilot-jobhunt-0.1.0
 ```
 
 > [!NOTE]
@@ -235,7 +235,7 @@ If you see this, your install is working correctly — config loads, CLI is on y
 
 > [!NOTE]
 > If you see `autopilot: command not found`, re-run `pip install -e '.[mcp]'` from
-> inside the `autopilot-jobs` directory.
+> inside the `autopilot-jobhunt` directory.
 
 ---
 
@@ -247,7 +247,7 @@ If you see this, your install is working correctly — config loads, CLI is on y
 
 ### 7a — Get the absolute path to the repo
 
-Run this from inside the `autopilot-jobs` directory:
+Run this from inside the `autopilot-jobhunt` directory:
 
 ```bash
 pwd
@@ -255,7 +255,7 @@ pwd
 
 Example output:
 ```
-/Users/yourname/autopilot-jobs
+/Users/yourname/autopilot-jobhunt
 ```
 
 Copy this path — you'll need it in 7c.
@@ -267,7 +267,7 @@ Copy this path — you'll need it in 7c.
 **Option A: one command (then manually add `cwd` in 7c)**
 
 ```bash
-claude mcp add autopilot-jobs \
+claude mcp add autopilot-jobhunt \
   --env TINYFISH_API_KEY=sk-tinyfish-your-key \
   --env OPENROUTER_API_KEY=sk-or-v1-your-key \
   --env TELEGRAM_TOKEN=your_token \
@@ -285,10 +285,10 @@ Open `~/.claude.json` (create it if it doesn't exist) and add the block below un
 ```json
 {
   "mcpServers": {
-    "autopilot-jobs": {
+    "autopilot-jobhunt": {
       "command": "python",
       "args": ["-m", "job_hunt.mcp_server"],
-      "cwd": "/Users/yourname/autopilot-jobs",
+      "cwd": "/Users/yourname/autopilot-jobhunt",
       "env": {
         "TINYFISH_API_KEY": "sk-tinyfish-your-key",
         "OPENROUTER_API_KEY": "sk-or-v1-your-key",
@@ -304,13 +304,13 @@ Open `~/.claude.json` (create it if it doesn't exist) and add the block below un
 
 ### 7c — Set the working directory (required for Option A)
 
-If you used `claude mcp add` (Option A), open `~/.claude.json` and find the `autopilot-jobs` entry. Add the `"cwd"` field pointing to your repo path from Step 7a:
+If you used `claude mcp add` (Option A), open `~/.claude.json` and find the `autopilot-jobhunt` entry. Add the `"cwd"` field pointing to your repo path from Step 7a:
 
 ```json
-"autopilot-jobs": {
+"autopilot-jobhunt": {
   "command": "python",
   "args": ["-m", "job_hunt.mcp_server"],
-  "cwd": "/Users/yourname/autopilot-jobs",   // ← add this line
+  "cwd": "/Users/yourname/autopilot-jobhunt",   // ← add this line
   "env": { ... }
 }
 ```
@@ -323,7 +323,7 @@ If you used `claude mcp add` (Option A), open `~/.claude.json` and find the `aut
 claude mcp list
 ```
 
-✅ **Expected:** `autopilot-jobs` appears in the list.
+✅ **Expected:** `autopilot-jobhunt` appears in the list.
 
 If it doesn't appear, open a new terminal and try again — Claude Code picks up config changes on restart.
 
@@ -333,7 +333,7 @@ If it doesn't appear, open a new terminal and try again — Claude Code picks up
 
 Start a Claude Code session and say:
 
-> "List the tools available from autopilot-jobs"
+> "List the tools available from autopilot-jobhunt"
 
 Claude should respond with: `scan_jobs`, `draft_application`, `export_jobs`.
 
@@ -405,7 +405,7 @@ This adds a cron job that runs `autopilot scan` every day at 2:30 AM local time 
 
 To remove the cron job:
 ```bash
-crontab -e   # delete the autopilot-jobs line
+crontab -e   # delete the autopilot-jobhunt line
 ```
 
 </details>
@@ -427,7 +427,7 @@ crontab -e   # delete the autopilot-jobs line
 | `python3 --version` < 3.11 | Python too old | Install 3.11+ via [pyenv](https://github.com/pyenv/pyenv) |
 | MCP server not in `claude mcp list` | Config not reloaded | Open a new terminal and check again |
 
-Still stuck? [Open an issue](https://github.com/tarunlnmiit/autopilot-jobs/issues) with the error message and your Python version.
+Still stuck? [Open an issue](https://github.com/tarunlnmiit/autopilot-jobhunt/issues) with the error message and your Python version.
 
 </details>
 
@@ -438,4 +438,4 @@ Still stuck? [Open an issue](https://github.com/tarunlnmiit/autopilot-jobs/issue
 - Edit `companies.json` to add companies you want to target
 - Adjust `min_score` in `config.json` (60–70 is a good starting range)
 - After your first scan, try `autopilot draft 1` to generate your first cover letter
-- Star the repo if this saved you time → [github.com/tarunlnmiit/autopilot-jobs](https://github.com/tarunlnmiit/autopilot-jobs)
+- Star the repo if this saved you time → [github.com/tarunlnmiit/autopilot-jobhunt](https://github.com/tarunlnmiit/autopilot-jobhunt)
