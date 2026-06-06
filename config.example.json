@@ -1,11 +1,11 @@
 {
   "tinyfish_api_key": "YOUR_TINYFISH_API_KEY",
   "openrouter_api_key": "YOUR_OPENROUTER_API_KEY",
-  "openrouter_model": "nvidia/nemotron-3-super-120b-a12b:free",
+  "openrouter_model": "meta-llama/llama-3.3-70b-instruct:free",
   "openrouter_fallback_models": [
-    "google/gemma-4-31b-it:free",
-    "google/gemma-4-26b-a4b-it:free",
-    "meta-llama/llama-3.3-70b-instruct:free"
+    "deepseek/deepseek-r1:free",
+    "google/gemma-2-27b-it:free",
+    "mistralai/mistral-7b-instruct:free"
   ],
   "telegram": {
     "token": "YOUR_TELEGRAM_BOT_TOKEN",

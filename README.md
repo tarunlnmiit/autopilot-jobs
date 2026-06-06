@@ -55,14 +55,16 @@ pip install -e .
 ```bash
 cp .env.example .env
 # Edit .env with your API keys
+
+cp config.example.json config.json
+# Edit config.json with your candidate profile
+# config.json is gitignored — safe to put real values here
 ```
 
-Or edit `config.json` directly:
+Key fields in `config.json`:
 
 ```json
 {
-  "tinyfish_api_key": "your_key",
-  "openrouter_api_key": "your_key",
   "candidate": {
     "name": "Your Name",
     "resume_path": "resume/YOUR_RESUME.md",
@@ -183,7 +185,8 @@ autopilot-jobs/
 ├── state/               # Scan state (gitignored)
 ├── output/              # Generated applications (gitignored)
 ├── companies.json       # 130+ target companies
-└── config.json          # Your config (keep secret, use .env instead)
+├── config.example.json  # Config template (copy to config.json — gitignored)
+└── config.json          # Your config (gitignored — never committed)
 ```
 
 ---
@@ -192,10 +195,10 @@ autopilot-jobs/
 
 The tool uses [OpenRouter](https://openrouter.ai) with a fallback chain of free models:
 
-1. `nvidia/nemotron-3-super-120b-a12b:free` (primary)
-2. `google/gemma-4-31b-it:free`
-3. `google/gemma-4-26b-a4b-it:free`
-4. `meta-llama/llama-3.3-70b-instruct:free`
+1. `meta-llama/llama-3.3-70b-instruct:free` (primary)
+2. `deepseek/deepseek-r1:free`
+3. `google/gemma-2-27b-it:free`
+4. `mistralai/mistral-7b-instruct:free`
 
 If one model rate-limits, it automatically falls back to the next. **Zero LLM cost by default.**
 
