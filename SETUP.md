@@ -123,7 +123,35 @@ You'll add both values to `.env` in Step 5.
 
 ---
 
-## Step 2 — Clone and install
+## Step 2 — Install
+
+### Option A — pip install (quickest)
+
+```bash
+pip install 'autopilot-jobhunt[mcp]'   # includes Claude Code MCP support
+mkdir my-job-hunt && cd my-job-hunt
+autopilot init
+```
+
+`autopilot init` seeds your working directory with everything you need:
+
+```
+✓ companies.json created (130+ companies pre-loaded)
+✓ config.json created — fill in your API keys and profile
+✓ .env created — fill in your API keys
+✓ resume/YOUR_RESUME.md created — replace with your resume
+
+Next:
+  1. Edit config.json — set your name, profile, and API keys
+  2. Replace resume/YOUR_RESUME.md with your actual resume
+  3. Run: autopilot scan
+```
+
+> [!IMPORTANT]
+> Always run `autopilot` commands from the directory where you ran `autopilot init`.
+> The tool reads `config.json` and `companies.json` from the current working directory.
+
+### Option B — clone (recommended if you want to customize companies or contribute)
 
 ```bash
 git clone https://github.com/tarunlnmiit/autopilot-jobhunt.git
@@ -440,7 +468,7 @@ crontab -e   # delete the autopilot-jobhunt line
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `config.json not found` | `cwd` not set in MCP config | Add `"cwd"` to `~/.claude.json` — see Step 7c |
+| `config.json not found` | Wrong working directory or `cwd` not set | Run `autopilot init` in your working dir, or add `"cwd"` to `~/.claude.json` — see Step 7c |
 | `All LLM models failed` | Wrong key, or all 4 models hit daily quota | Verify `OPENROUTER_API_KEY`; wait for midnight UTC reset |
 | `autopilot: command not found` | pip install incomplete or wrong venv | Re-run `pip install -e '.[mcp]'` from repo directory |
 | No Telegram notification | Token not configured | Expected — scan still completes, results print to terminal |

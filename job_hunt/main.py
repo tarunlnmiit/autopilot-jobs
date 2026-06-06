@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Usage:
+  autopilot init              — set up working directory (first-time pip install setup)
   autopilot scan              — run daily job scan
   autopilot draft #1          — draft application for job #1 from last scan
   autopilot draft https://... — draft application for a specific URL
@@ -23,7 +24,7 @@ def load_config() -> dict:
     load_dotenv()
     p = Path("config.json")
     if not p.exists():
-        sys.exit("config.json not found. Run from the project directory.")
+        sys.exit("config.json not found.\nRun 'autopilot init' to set up your working directory.")
 
     config = json.loads(p.read_text())
 
@@ -74,8 +75,38 @@ def load_config() -> dict:
 def load_companies() -> list:
     p = Path("companies.json")
     if not p.exists():
-        sys.exit("companies.json not found.")
+        sys.exit("companies.json not found.\nRun 'autopilot init' to set up your working directory.")
     return json.loads(p.read_text())
+
+
+def init_project() -> None:
+    import importlib.resources as pkg_resources
+
+    cwd = Path.cwd()
+    data_pkg = pkg_resources.files("job_hunt.data")
+
+    def _copy(src_name: str, dest: Path, label: str) -> None:
+        if dest.exists():
+            print(f"  {dest.name} already exists, skipping")
+        else:
+            dest.write_text(data_pkg.joinpath(src_name).read_text(encoding="utf-8"), encoding="utf-8")
+            print(f"✓ {label}")
+
+    _copy("companies.json", cwd / "companies.json", "companies.json created (130+ companies pre-loaded)")
+    _copy("config.example.json", cwd / "config.json", "config.json created — fill in your API keys and profile")
+    _copy("env_example", cwd / ".env", ".env created — fill in your API keys")
+
+    resume_dir = cwd / "resume"
+    resume_dir.mkdir(exist_ok=True)
+    _copy("resume_template.md", resume_dir / "YOUR_RESUME.md", "resume/YOUR_RESUME.md created — replace with your resume")
+
+    (cwd / "state").mkdir(exist_ok=True)
+    (cwd / "output").mkdir(exist_ok=True)
+
+    print("\nNext:")
+    print("  1. Edit config.json — set your name, profile, and API keys")
+    print("  2. Replace resume/YOUR_RESUME.md with your actual resume")
+    print("  3. Run: autopilot scan")
 
 
 LAST_SCAN_FILE = Path("state/last_scan.json")
@@ -147,6 +178,11 @@ def main() -> None:
         sys.exit(0)
 
     cmd = sys.argv[1].lower()
+
+    if cmd == "init":
+        init_project()
+        return
+
     config = load_config()
 
     if cmd == "scan":

@@ -1,3 +1,4 @@
+import csv
 import json
 import re
 import time
@@ -7,19 +8,20 @@ from pathlib import Path
 from tinyfish import RateLimitError, TinyFish
 
 from job_hunt.llm_utils import chat_with_llm
+from job_hunt.log import get_logger
 from job_hunt.notifier import send_telegram
+
+logger = get_logger()
 
 STATE_FILE = Path("state/seen_jobs.json")
 LAST_SCAN_FILE = Path("state/last_scan.json")
 JOB_HISTORY_FILE = Path("state/job_history.json")
 
-# Matches individual job postings by URL pattern
 JOB_URL_RE = re.compile(
     r"/(job|jobs|opening|openings|position|positions|vacancy|vacancies|role|roles|apply)"
     r"/[a-zA-Z0-9_%@.-]{4,}",
     re.IGNORECASE,
 )
-# Lever: job UUID is 36 chars; Greenhouse: /jobs/12345; Ashby: /jobs/uuid
 ATS_JOB_RE = re.compile(
     r"(greenhouse\.io/.+/jobs/\d+"
     r"|lever\.co/[^/]+/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"
@@ -28,7 +30,6 @@ ATS_JOB_RE = re.compile(
     r"|ashbyhq\.com/[^/]+/[a-f0-9-]{32,})",
     re.IGNORECASE,
 )
-# ATS listing pages (company-level, not individual jobs) — need one more hop
 ATS_LISTING_RE = re.compile(
     r"^https?://(jobs\.lever\.co|boards\.greenhouse\.io|apply\.workable\.com"
     r"|jobs\.smartrecruiters\.com)/[^/?#]+/?(\?.*)?$",
@@ -67,6 +68,11 @@ Scoring: 80-100 near-perfect; 60-79 good fit; 40-59 partial; <40 poor.
 Set worth_applying=true only if score >= {min_score}.
 Include ALL jobs. Output ONLY the JSON array."""
 
+EXPORT_FIELDS = [
+    "Company", "Role", "Location", "Application URL",
+    "Score (%)", "Stack", "Region", "Reason", "Worth Applying", "Scan Date",
+]
+
 
 def _build_candidate_profile(config: dict) -> str:
     cand = config.get("candidate", {})
@@ -104,33 +110,29 @@ def save_state(state: dict) -> None:
     STATE_FILE.write_text(json.dumps(state, indent=2))
 
 
-_FETCH_URL_DELAY = 2.5  # seconds per URL to stay under 25 URLs/min
+_FETCH_URL_DELAY = 2.5
 
 
-def _fetch_with_ratelimit(
-    tf: TinyFish, urls: list[str], **kwargs
-):
-    """Single fetch call with rate-limit retry."""
+def _fetch_with_ratelimit(tf: TinyFish, urls: list[str], **kwargs):
     for attempt in range(2):
         try:
             resp = tf.fetch.get_contents(urls, **kwargs)
             time.sleep(len(urls) * _FETCH_URL_DELAY)
             return resp
         except RateLimitError:
-            print("  fetch rate-limited, waiting 65s...")
+            logger.warning("Fetch rate-limited — waiting 65s before retry...")
             time.sleep(65)
         except Exception as e:
-            print(f"  fetch error: {e}")
+            logger.error(f"Fetch error for {urls[:1]}: {e}")
             time.sleep(len(urls) * _FETCH_URL_DELAY)
             return None
     return None
 
 
 def _fetch_links(tf: TinyFish, urls: list[str]) -> dict[str, list[str]]:
-    """Batch fetch URLs, return {url: [links]} mapping."""
     result = {}
     for i in range(0, len(urls), 10):
-        batch = urls[i : i + 10]
+        batch = urls[i: i + 10]
         resp = _fetch_with_ratelimit(tf, batch, format="markdown", links=True)
         if resp:
             for r in resp.results:
@@ -138,49 +140,47 @@ def _fetch_links(tf: TinyFish, urls: list[str]) -> dict[str, list[str]]:
     return result
 
 
-def discover_job_urls(
-    tf: TinyFish, company: dict, seen_urls: set
-) -> list[dict]:
-    """
-    Multi-hop discovery:
-    1. Fetch careers page → extract direct job links + ATS listing pages
-    2. Fetch ATS listing pages → extract individual job links
-    3. Search for additional indexed job pages
-    """
+def discover_job_urls(tf: TinyFish, company: dict, seen_urls: set) -> list[dict]:
     found_urls: set[str] = set()
 
-    # --- Step 1: Fetch careers page ---
+    logger.debug(f"  [{company['name']}] Fetching careers page: {company['careers_url']}")
     resp = _fetch_with_ratelimit(tf, [company["careers_url"]], format="markdown", links=True)
-    if resp:
-        if resp.results:
-            links = resp.results[0].links
-            direct = [link for link in links if is_job_url(link) and link not in seen_urls]
-            ats_pages = list({link for link in links if is_ats_listing(link)})
-            found_urls.update(direct)
+    if resp and resp.results:
+        links = resp.results[0].links
+        direct = [link for link in links if is_job_url(link) and link not in seen_urls]
+        ats_pages = list({link for link in links if is_ats_listing(link)})
+        found_urls.update(direct)
+        logger.debug(f"  [{company['name']}] Careers page: {len(direct)} direct job links, {len(ats_pages)} ATS listing pages")
 
-            # --- Step 2: Expand ATS listing pages ---
-            if ats_pages:
-                ats_link_map = _fetch_links(tf, ats_pages[:5])
-                for page_links in ats_link_map.values():
-                    for link in page_links:
-                        if is_job_url(link) and link not in seen_urls:
-                            found_urls.add(link)
+        if ats_pages:
+            logger.debug(f"  [{company['name']}] Expanding {len(ats_pages)} ATS listing page(s)...")
+            ats_link_map = _fetch_links(tf, ats_pages[:5])
+            ats_jobs = 0
+            for page_links in ats_link_map.values():
+                for link in page_links:
+                    if is_job_url(link) and link not in seen_urls:
+                        found_urls.add(link)
+                        ats_jobs += 1
+            logger.debug(f"  [{company['name']}] ATS expansion: {ats_jobs} additional job links")
 
-    # --- Step 3: Search for indexed job pages (rate-limited: 5/min) ---
     query = SEARCH_QUERY.format(domain=company["search_domain"])
+    logger.debug(f"  [{company['name']}] Search query: {query}")
     for attempt in range(2):
         try:
             resp = tf.search.query(query, language="en")
+            search_new = 0
             for r in resp.results:
                 if is_job_url(r.url) and r.url not in seen_urls:
                     found_urls.add(r.url)
-            time.sleep(13)  # stay under 5 req/min
+                    search_new += 1
+            logger.debug(f"  [{company['name']}] Search: {len(resp.results)} results, {search_new} new job URLs")
+            time.sleep(13)
             break
         except RateLimitError:
-            print(f"  search rate-limited ({company['name']}), waiting 60s...")
+            logger.warning(f"  [{company['name']}] Search rate-limited — waiting 60s...")
             time.sleep(62)
         except Exception as e:
-            print(f"  search error ({company['name']}): {e}")
+            logger.error(f"  [{company['name']}] Search error: {e}")
             time.sleep(13)
             break
 
@@ -201,8 +201,9 @@ def discover_job_urls(
 def fetch_job_details(tf: TinyFish, jobs: list[dict]) -> list[dict]:
     enriched = []
     for i in range(0, len(jobs), 10):
-        batch = jobs[i : i + 10]
+        batch = jobs[i: i + 10]
         urls = [j["url"] for j in batch]
+        logger.debug(f"  Fetching details for {len(batch)} job(s): {[j['title'][:40] for j in batch]}")
         resp = _fetch_with_ratelimit(tf, urls, format="markdown")
         if not resp:
             enriched.extend(batch)
@@ -213,6 +214,9 @@ def fetch_job_details(tf: TinyFish, jobs: list[dict]) -> list[dict]:
             if r and r.text:
                 job["content"] = r.text[:3000]
                 job["title"] = r.title or job["title"]
+                logger.debug(f"    Fetched '{job['title']}' — {len(r.text)} chars")
+            else:
+                logger.debug(f"    No content for: {job['url']}")
             enriched.append(job)
     return enriched
 
@@ -238,38 +242,50 @@ def score_jobs(jobs: list[dict], resume: str, config: dict) -> list[dict]:
         min_score=min_score,
     )
 
+    logger.debug(f"  Scoring {len(jobs)} job(s) via LLM (min_score={min_score})...")
+    t0 = time.time()
     try:
         raw = chat_with_llm(
             config,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.1,
         )
+        elapsed = time.time() - t0
         start, end = raw.find("["), raw.rfind("]") + 1
         if start == -1:
+            logger.error("  LLM returned no JSON array")
             return []
         scored = json.loads(raw[start:end])
+        logger.debug(f"  LLM scoring complete in {elapsed:.1f}s — {len(scored)} results parsed")
     except Exception as e:
-        print(f"  scoring error: {e}")
+        logger.error(f"  Scoring error: {e}")
         return []
 
     results = []
     for item in scored:
-        if not item.get("worth_applying"):
+        score = item.get("score", 0)
+        title = item.get("title", "?")
+        reason = item.get("reason", "")
+        worth = item.get("worth_applying", False)
+        logger.debug(f"    [{score:3d}] {title} — {reason[:80]}")
+        if not worth:
             continue
         idx = item.get("job_number", 0) - 1
         if 0 <= idx < len(jobs):
             job = jobs[idx].copy()
             job.update(
                 {
-                    "score": item.get("score", 0),
-                    "extracted_title": item.get("title", job["title"]),
+                    "score": score,
+                    "extracted_title": title,
                     "stack": item.get("stack", ""),
                     "location_remote": item.get("location_remote", job["location"]),
-                    "reason": item.get("reason", ""),
+                    "reason": reason,
                 }
             )
             results.append(job)
 
+    passing = len(results)
+    logger.debug(f"  {passing}/{len(scored)} jobs passed min_score threshold")
     return sorted(results, key=lambda x: x["score"], reverse=True)
 
 
@@ -287,65 +303,117 @@ def format_telegram_message(top_jobs: list[dict], date_str: str) -> str:
     return "\n".join(lines)
 
 
+def _export_to_csv(jobs: list[dict], label: str) -> Path:
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    out_path = Path("output") / f"jobs_{date_str}.csv"
+    out_path.parent.mkdir(exist_ok=True)
+
+    def _row(j: dict) -> dict:
+        worth = j.get("worth_applying")
+        return {
+            "Company": j.get("company", ""),
+            "Role": j.get("extracted_title") or j.get("title", ""),
+            "Location": j.get("location_remote") or j.get("location", ""),
+            "Application URL": j.get("url", ""),
+            "Score (%)": j.get("score", ""),
+            "Stack": j.get("stack", ""),
+            "Region": j.get("region", ""),
+            "Reason": j.get("reason", ""),
+            "Worth Applying": "Yes" if worth else ("No" if worth is False else ""),
+            "Scan Date": j.get("scan_date", ""),
+        }
+
+    with out_path.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=EXPORT_FIELDS)
+        writer.writeheader()
+        for j in jobs:
+            writer.writerow(_row(j))
+
+    logger.info(f"Results exported to CSV ({label}): {out_path}")
+    return out_path
+
+
 def run_scan(config: dict, companies: list[dict]) -> None:
+    scan_start = time.time()
+    total = len(companies)
+    logger.info(f"=== Scan started — {total} companies to check ===")
+    logger.info(f"Candidate: {config.get('candidate', {}).get('name', 'unknown')}")
+    logger.info(f"Min score: {config.get('candidate', {}).get('min_score', 55)} | Top N: {config.get('candidate', {}).get('top_n', 5)}")
+    logger.info(f"LLM provider: {config.get('llm_provider', 'openrouter')} | Model: {config.get('openrouter_model', 'default')}")
+
     try:
         tf = TinyFish(api_key=config["tinyfish_api_key"])
+        logger.debug("TinyFish client initialised")
     except Exception as e:
-        print(f"TinyFish init error: {e}")
+        logger.error(f"TinyFish init error: {e}")
         return
 
     resume_path = Path(config.get("candidate", {}).get("resume_path", "resume/YOUR_RESUME.md"))
     resume = resume_path.read_text()
+    logger.debug(f"Resume loaded: {resume_path} ({len(resume)} chars)")
+
     min_score = config.get("candidate", {}).get("min_score", 55)
     top_n = config.get("candidate", {}).get("top_n", 5)
 
     state = load_state()
     seen_urls: set = set(state.get("seen_urls", []))
+    logger.info(f"State loaded — {len(seen_urls)} previously seen URLs")
+
     all_scored_jobs: list[dict] = []
     errors: list[str] = []
+    companies_scanned = 0
+    companies_with_jobs = 0
 
-    for company in companies:
-        print(f"Scanning {company['name']}...")
+    for idx, company in enumerate(companies, 1):
+        logger.info(f"[{idx}/{total}] Scanning {company['name']}...")
         try:
             new_jobs = discover_job_urls(tf, company, seen_urls)
             if not new_jobs:
-                print("  No new jobs found")
+                logger.info(f"  No new job URLs found")
+                companies_scanned += 1
                 continue
 
-            print(f"  {len(new_jobs)} new job URLs. Fetching details...")
+            logger.info(f"  {len(new_jobs)} new job URL(s) — fetching details...")
             new_jobs = fetch_job_details(tf, new_jobs)
             seen_urls.update(j["url"] for j in new_jobs)
 
-            print("  Scoring jobs...")
+            logger.info(f"  Scoring {len(new_jobs)} job(s)...")
             scored: list[dict] = []
             try:
                 for i in range(0, len(new_jobs), 10):
-                    batch = new_jobs[i : i + 10]
+                    batch = new_jobs[i: i + 10]
+                    logger.debug(f"  Scoring batch {i // 10 + 1} ({len(batch)} jobs)...")
                     batch_scored = score_jobs(batch, resume, config)
                     scored.extend(batch_scored)
             except Exception as score_err:
-                print(f"  Scoring failed: {score_err}")
-                msg = f"⚠️ Scoring failed for {company['name']}: {score_err}"
-                errors.append(msg)
-                print(f"  Fallback: saving unscored jobs from {company['name']}")
+                logger.error(f"  Scoring failed: {score_err}")
+                errors.append(f"⚠️ Scoring failed for {company['name']}: {score_err}")
+                logger.warning(f"  Saving {len(new_jobs)} unscored job(s) as fallback")
                 scored = new_jobs
 
             if scored:
                 all_scored_jobs.extend(scored)
-                print(f"  Saved {len(scored)} jobs from {company['name']}")
+                companies_with_jobs += 1
+                titles = [j.get("extracted_title") or j.get("title", "?") for j in scored[:3]]
+                logger.info(f"  {len(scored)} job(s) saved: {', '.join(titles)}{' ...' if len(scored) > 3 else ''}")
+
+            companies_scanned += 1
 
         except Exception as company_err:
             msg = f"❌ {company['name']}: {company_err}"
             errors.append(msg)
-            print(f"  Company scan failed: {company_err}")
+            logger.error(f"  Company scan failed: {company_err}")
             continue
 
     state["seen_urls"] = list(seen_urls)
     state["last_scan"] = datetime.now(timezone.utc).isoformat()
     save_state(state)
+    logger.debug("State saved")
 
-    top_jobs = sorted([j for j in all_scored_jobs if j.get("score", 0) >= min_score],
-                      key=lambda x: x.get("score", 0), reverse=True)[:top_n]
+    top_jobs = sorted(
+        [j for j in all_scored_jobs if j.get("score", 0) >= min_score],
+        key=lambda x: x.get("score", 0), reverse=True
+    )[:top_n]
 
     scan_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     for job in all_scored_jobs:
@@ -353,6 +421,7 @@ def run_scan(config: dict, companies: list[dict]) -> None:
 
     LAST_SCAN_FILE.parent.mkdir(exist_ok=True)
     LAST_SCAN_FILE.write_text(json.dumps(all_scored_jobs, indent=2))
+    logger.debug(f"Last scan saved: {len(all_scored_jobs)} total jobs → {LAST_SCAN_FILE}")
 
     history: list[dict] = []
     if JOB_HISTORY_FILE.exists():
@@ -364,22 +433,42 @@ def run_scan(config: dict, companies: list[dict]) -> None:
     new_entries = [j for j in all_scored_jobs if j["url"] not in existing_urls]
     history.extend(new_entries)
     JOB_HISTORY_FILE.write_text(json.dumps(history, indent=2))
+    logger.debug(f"Job history updated: +{len(new_entries)} new entries ({len(history)} total)")
+
+    elapsed = time.time() - scan_start
+    logger.info(
+        f"=== Scan complete — {companies_scanned}/{total} companies, "
+        f"{len(all_scored_jobs)} jobs found, {len(top_jobs)} top matches "
+        f"({elapsed / 60:.1f} min) ==="
+    )
+
+    if top_jobs:
+        logger.info("Top matches:")
+        for j in top_jobs:
+            logger.info(f"  [{j.get('score', '?'):3}] {j.get('extracted_title') or j.get('title')} @ {j['company']} — {j.get('reason', '')[:80]}")
 
     date_str = datetime.now().strftime("%d %b %Y")
     tg = config.get("telegram", {})
+    telegram_configured = bool(tg.get("token") and tg.get("chat_id"))
 
-    if errors and tg.get("token") and tg.get("chat_id"):
+    if errors and telegram_configured:
         error_msg = f"<b>Job Hunt Errors — {date_str}</b>\n" + "\n".join(errors)
         send_telegram(tg["token"], tg["chat_id"], error_msg)
 
     if not top_jobs:
-        print("No matching jobs found today.")
+        logger.info("No matching jobs found today.")
         msg = f"<b>Job Hunt — {date_str}</b>\nNo new matches today."
-    else:
-        msg = format_telegram_message(top_jobs, date_str)
-        print("\n" + msg)
+        if telegram_configured:
+            send_telegram(tg["token"], tg["chat_id"], msg)
+        return
 
-    if tg.get("token") and tg.get("chat_id"):
+    msg = format_telegram_message(top_jobs, date_str)
+    logger.info("\n" + msg)
+
+    if telegram_configured:
         send_telegram(tg["token"], tg["chat_id"], msg)
+        logger.info("Telegram notification sent.")
     else:
-        print("\n[Telegram not configured — add token and chat_id to config.json]")
+        logger.info("Telegram not configured — exporting results to CSV instead.")
+        _export_to_csv(all_scored_jobs, "scan results")
+        logger.info("Add telegram.token and telegram.chat_id to config.json to enable notifications.")

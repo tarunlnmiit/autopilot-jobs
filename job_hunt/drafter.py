@@ -6,6 +6,9 @@ from pathlib import Path
 from tinyfish import TinyFish
 
 from job_hunt.llm_utils import chat_with_llm
+from job_hunt.log import get_logger
+
+logger = get_logger()
 
 LAST_SCAN_FILE = Path("state/last_scan.json")
 OUTPUT_DIR = Path("output")
@@ -16,7 +19,6 @@ def _slug(text: str) -> str:
 
 
 def _resolve_job(job_ref: str) -> tuple[str, str]:
-    """Returns (url, company_slug). job_ref is '#1', '1', or a full URL."""
     if job_ref.startswith("http"):
         return job_ref, "company"
 
@@ -29,6 +31,7 @@ def _resolve_job(job_ref: str) -> tuple[str, str]:
         raise ValueError(f"Job #{idx + 1} not in last scan (found {len(jobs)} jobs)")
 
     job = jobs[idx]
+    logger.debug(f"Resolved job #{idx + 1}: '{job.get('extracted_title') or job.get('title')}' @ {job.get('company')} — {job.get('url')}")
     return job["url"], _slug(job.get("company", "company"))
 
 
@@ -40,23 +43,25 @@ def draft_application(config: dict, job_ref: str) -> None:
     resume_path = Path(cand.get("resume_path", "resume/YOUR_RESUME.md"))
     resume = resume_path.read_text()
     relocation_note = cand.get("relocation_note", "")
+    logger.debug(f"Resume loaded: {resume_path} ({len(resume)} chars)")
 
     job_url, company_slug = _resolve_job(job_ref)
 
-    print(f"Fetching JD: {job_url}")
+    logger.info(f"Fetching JD: {job_url}")
     fetch_resp = tf.fetch.get_contents([job_url], format="markdown")
     if not fetch_resp.results or not fetch_resp.results[0].text:
         raise RuntimeError(f"Failed to fetch JD. Errors: {fetch_resp.errors}")
 
     jd = fetch_resp.results[0].text
     jd_truncated = jd[:4000]
+    logger.debug(f"JD fetched: {len(jd)} chars (using first {len(jd_truncated)} for prompts)")
 
     date_str = datetime.now().strftime("%Y-%m-%d")
     out_dir = OUTPUT_DIR / f"{company_slug}-{date_str}"
     out_dir.mkdir(parents=True, exist_ok=True)
+    logger.debug(f"Output directory: {out_dir.resolve()}")
 
-    # 1. Tailored resume
-    print("Tailoring resume...")
+    logger.info("Tailoring resume...")
     resume_md = chat_with_llm(
         config,
         messages=[{"role": "user", "content": f"""Rewrite the resume below to mirror the language and emphasized skills in this job description.
@@ -79,10 +84,9 @@ Output ONLY the tailored resume in Markdown. No preamble."""}],
     )
     tailored_resume_path = out_dir / f"resume_{company_slug}.md"
     tailored_resume_path.write_text(resume_md)
-    print(f"  Saved: {tailored_resume_path}")
+    logger.info(f"  Saved: {tailored_resume_path} ({len(resume_md)} chars)")
 
-    # 2. Cover letter
-    print("Drafting cover letter...")
+    logger.info("Drafting cover letter...")
     relocation_line = f"- {relocation_note}" if relocation_note else ""
     cover_md = chat_with_llm(
         config,
@@ -108,10 +112,9 @@ Output ONLY the cover letter. No preamble."""}],
     )
     cover_path = out_dir / f"cover_letter_{company_slug}.md"
     cover_path.write_text(cover_md)
-    print(f"  Saved: {cover_path}")
+    logger.info(f"  Saved: {cover_path} ({len(cover_md)} chars)")
 
-    # 3. Application info
-    print("Extracting application info...")
+    logger.info("Extracting application info...")
     info_txt = chat_with_llm(
         config,
         messages=[{"role": "user", "content": f"""Extract from this job posting (plain text output, clear labels):
@@ -129,7 +132,7 @@ JOB DESCRIPTION:
     )
     info_path = out_dir / "application_info.txt"
     info_path.write_text(f"Source URL: {job_url}\n\n{info_txt}")
-    print(f"  Saved: {info_path}")
+    logger.info(f"  Saved: {info_path}")
 
-    print(f"\nAll files in: {out_dir.resolve()}")
-    print("Review, edit, then submit manually.")
+    logger.info(f"\nAll files in: {out_dir.resolve()}")
+    logger.info("Review, edit, then submit manually.")

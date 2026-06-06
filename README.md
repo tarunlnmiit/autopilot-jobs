@@ -104,6 +104,18 @@ Both modes use the same config and produce the same output.
 
 ## Quick start
 
+### Option A — pip install
+
+```bash
+pip install autopilot-jobhunt        # or: pip install 'autopilot-jobhunt[mcp]' for Claude Code
+mkdir my-job-hunt && cd my-job-hunt
+autopilot init                       # creates config.json, companies.json, resume/, .env
+# Fill in config.json (API keys + your profile) and resume/YOUR_RESUME.md, then:
+autopilot scan
+```
+
+### Option B — clone (recommended if you want to customize companies or contribute)
+
 ```bash
 git clone https://github.com/tarunlnmiit/autopilot-jobhunt.git
 cd autopilot-jobhunt

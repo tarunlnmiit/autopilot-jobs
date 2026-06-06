@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "autopilot-jobhunt"
-version = "0.1.0"
+version = "0.2.0"
 description = "AI-powered job scanner, scorer, and application drafter. Finds jobs while you sleep."
 readme = "README.md"
 license = { text = "MIT" }
@@ -46,3 +46,4 @@ ignore = ["E501"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["job_hunt"]
+include = ["job_hunt/data/**"]
