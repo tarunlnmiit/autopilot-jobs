@@ -466,8 +466,12 @@ def run_scan(config: dict, companies: list[dict]) -> None:
     logger.info("\n" + msg)
 
     if telegram_configured:
-        send_telegram(tg["token"], tg["chat_id"], msg)
-        logger.info("Telegram notification sent.")
+        sent = send_telegram(tg["token"], tg["chat_id"], msg)
+        if sent:
+            logger.info("Telegram notification sent.")
+        else:
+            logger.warning("Telegram send failed — exporting results to CSV as fallback.")
+            _export_to_csv(all_scored_jobs, "scan results")
     else:
         logger.info("Telegram not configured — exporting results to CSV instead.")
         _export_to_csv(all_scored_jobs, "scan results")
