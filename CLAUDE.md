@@ -39,9 +39,26 @@ job_hunt/
 
 ## Rate limits (free tier)
 
-- **TinyFish:** 5 searches/min, 25 URL fetches/min — scanner auto-paces, no action needed
-- **OpenRouter:** 4-model fallback chain handles per-model daily quotas automatically
-- **Scan time:** 30–90 min for 130+ companies — normal, run nightly via cron
+### TinyFish (job discovery)
+
+- **Search:** 5 requests/min — scanner auto-paces, sleeps between batches
+- **URL fetch:** 25 requests/min — auto-paced, no action needed
+- **Free tier:** completely free, no credit card, no daily cap
+- **Scan duration:** 30–90 min for 130+ companies is normal — deliberate pacing, not a bug
+- **"No new jobs found":** TinyFish found no postings matching the query for that company today — not an error
+
+### OpenRouter (LLM scoring + drafting)
+
+- **Free tier:** no credit card needed, but each model has a **daily quota** (resets midnight UTC)
+- **Fallback chain** (tried in order, auto-skips on quota exhaustion):
+  1. `meta-llama/llama-3.3-70b-instruct:free` — primary
+  2. `nvidia/nemotron-3-super-120b-a12b:free` — fallback 1
+  3. `google/gemma-4-31b-it:free` — fallback 2
+  4. `qwen/qwen3-coder:free` — fallback 3
+- **Calls per scan:** ~5–15 LLM calls (jobs scored in batches of 10) — one nightly scan stays within all four models' free limits
+- **"All LLM models failed":** all 4 models hit their daily quota — wait for midnight UTC reset, or add a small OpenRouter credit ($1–5) to remove the cap
+- **Multiple scans/day:** risks exhausting free-tier quota — run once nightly via cron
+- Check live per-model limits: [openrouter.ai/models](https://openrouter.ai/models)
 
 ## MCP registration (Claude Code)
 
