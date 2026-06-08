@@ -84,12 +84,19 @@ def _chat_with_claude_cli(config: dict, messages: list[dict], temperature: float
         raise RuntimeError(f"claude CLI exited {result.returncode}: {result.stderr.strip()}")
 
     try:
-        events = json.loads(result.stdout)
-        result_event = next((e for e in events if e.get("type") == "result"), None)
-        if result_event is None:
-            raise KeyError("no 'result' event found in output")
-        text = result_event["result"]
-    except (json.JSONDecodeError, KeyError, TypeError) as e:
+        data = json.loads(result.stdout)
+        if isinstance(data, dict):
+            text = data.get("result")
+            if text is None:
+                raise KeyError("no 'result' field in output")
+        elif isinstance(data, list):
+            result_event = next((e for e in data if isinstance(e, dict) and e.get("type") == "result"), None)
+            if result_event is None:
+                raise KeyError("no 'result' event found in output")
+            text = result_event["result"]
+        else:
+            raise TypeError(f"unexpected output type: {type(data)}")
+    except (json.JSONDecodeError, KeyError, TypeError, AttributeError) as e:
         raise RuntimeError(f"claude CLI unexpected output ({e}): {result.stdout[:200]}")
 
     elapsed = time.time() - t0
