@@ -70,10 +70,67 @@ A nightly scan uses approximately **5–15 LLM calls** (jobs are scored in batch
 
 ---
 
-### Claude / Anthropic (optional — alternative to OpenRouter)
+### Option B — Claude Code CLI (optional — no API key needed)
 
 <details>
-<summary>Use Claude as your LLM instead of OpenRouter — click to expand</summary>
+<summary>Use Claude Code CLI as your LLM — no API key required — click to expand</summary>
+
+If you have [Claude Code](https://claude.ai/code) installed and authenticated (Pro, Team, or Enterprise subscription), you can use it as the LLM backend without any API key.
+
+1. Install Claude Code: [claude.ai/code](https://claude.ai/code)
+2. Authenticate:
+   ```bash
+   claude auth login
+   ```
+3. Verify it works:
+   ```bash
+   claude --print "hi"
+   ```
+4. In `config.json`, set:
+   ```json
+   "llm_provider": "claude_cli"
+   ```
+5. Optionally set a model (empty string = Claude's default):
+   ```json
+   "claude_cli_model": "sonnet"
+   ```
+   Accepted values: `"sonnet"`, `"opus"`, `"haiku"`, or a full model ID like `"claude-sonnet-4-6"`.
+
+You can also switch provider via environment variable without editing config:
+```bash
+LLM_PROVIDER=claude_cli autopilot scan
+```
+
+> [!TIP]
+> Leave `openrouter_api_key` empty if using Claude CLI — the field is ignored when
+> `llm_provider` is set to `"claude_cli"`.
+
+> [!WARNING]
+> **Cron jobs and MCP server:** Both run as background processes. They inherit the shell
+> environment of the user who started them, so your `claude` auth session must be active
+> in that environment. Run `claude --print "hi"` from the same shell context (same user,
+> same session) before scheduling to confirm auth works there.
+
+> [!NOTE]
+> `temperature` and `max_tokens` are not configurable when using Claude CLI — the binary
+> doesn't expose these flags. The default model settings are used for all calls.
+
+> [!WARNING]
+> **Subscription rate-limit burn.** Each CLI call loads your global Claude Code context
+> (CLAUDE.md, rules, memory) — typically 25,000–30,000 tokens even for a short prompt. A
+> nightly scan makes 5–15 LLM calls, consuming that many large requests against your
+> subscription's 7-day rate limit. If you're already heavy on Claude Code usage, a full
+> scan may trigger a rate-limit warning or temporary slowdown. Prefer OpenRouter (default)
+> for nightly automation; use Claude CLI for occasional on-demand drafts or when testing.
+
+</details>
+
+---
+
+### Option C — Anthropic API (optional — alternative to OpenRouter)
+
+<details>
+<summary>Use Claude API with an Anthropic API key — click to expand</summary>
 
 If you have an Anthropic API key or Claude Pro, you can skip OpenRouter entirely.
 
@@ -94,7 +151,7 @@ Recommended models:
 - `claude-sonnet-4-6` — higher quality scores, higher cost
 
 > [!TIP]
-> Leave `openrouter_api_key` empty if using Claude — the field is ignored when
+> Leave `openrouter_api_key` empty if using the Anthropic API — the field is ignored when
 > `llm_provider` is set to `"anthropic"`.
 
 </details>
@@ -470,6 +527,8 @@ crontab -e   # delete the autopilot-jobhunt line
 |---|---|---|
 | `config.json not found` | Wrong working directory or `cwd` not set | Run `autopilot init` in your working dir, or add `"cwd"` to `~/.claude.json` — see Step 7c |
 | `All LLM models failed` | Wrong key, or all 4 models hit daily quota | Verify `OPENROUTER_API_KEY`; wait for midnight UTC reset |
+| `claude binary not found in PATH` | Claude CLI not installed or not on PATH | Install from [claude.ai/code](https://claude.ai/code); run `which claude` to verify |
+| `claude CLI exited 1` | Not authenticated | Run `claude auth login` then retry |
 | `autopilot: command not found` | pip install incomplete or wrong venv | Re-run `pip install -e '.[mcp]'` from repo directory |
 | No Telegram notification | Token not configured | Expected — scan still completes, results print to terminal |
 | Scan takes 30–90 min | Normal pacing for free tier | Let it run; use cron to automate |

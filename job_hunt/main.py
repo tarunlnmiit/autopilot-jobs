@@ -40,9 +40,11 @@ def load_config() -> dict:
 
     env_mapping = {
         "TINYFISH_API_KEY": "tinyfish_api_key",
+        "LLM_PROVIDER": "llm_provider",
         "OPENROUTER_API_KEY": "openrouter_api_key",
         "OPENROUTER_MODEL": "openrouter_model",
         "OPENROUTER_FALLBACK_MODELS": "openrouter_fallback_models",
+        "CLAUDE_CLI_MODEL": "claude_cli_model",
     }
 
     for env_key, config_key in env_mapping.items():

@@ -31,7 +31,7 @@ job_hunt/
   scanner.py    — TinyFish API job discovery + LLM scoring pipeline
   drafter.py    — cover letter + tailored resume bullet generation
   notifier.py   — Telegram notification sender (optional, graceful if unconfigured)
-  llm_utils.py  — OpenRouter wrapper with 4-model free-tier fallback chain
+  llm_utils.py  — LLM dispatch: OpenRouter (default), Anthropic API, or Claude Code CLI
   tools.py      — protocol-agnostic tool layer (wraps scanner/drafter/exporter)
   mcp_server.py — FastMCP server exposing scan_jobs, draft_application, export_jobs
   main.py       — CLI entry point (autopilot command)
@@ -59,6 +59,15 @@ job_hunt/
 - **"All LLM models failed":** all 4 models hit their daily quota — wait for midnight UTC reset, or add a small OpenRouter credit ($1–5) to remove the cap
 - **Multiple scans/day:** risks exhausting free-tier quota — run once nightly via cron
 - Check live per-model limits: [openrouter.ai/models](https://openrouter.ai/models)
+
+### Claude Code CLI (LLM backend — no API key needed)
+
+- **Cost:** uses your Claude subscription (Pro/Team/Enterprise)
+- **Setup:** `claude auth login` — no API key required
+- **Activate:** set `"llm_provider": "claude_cli"` in `config.json` or `LLM_PROVIDER=claude_cli` in `.env`
+- **Model:** set `"claude_cli_model": "sonnet"` (or `"opus"`, `"haiku"`) — empty = Claude's default
+- **Rate limits:** governed by your subscription tier, not a daily free quota
+- **Cron / MCP note:** subprocess inherits user session auth — verify with `claude --print "hi"` in the same shell context before scheduling
 
 ## MCP registration (Claude Code)
 

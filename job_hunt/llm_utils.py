@@ -1,4 +1,6 @@
+import json
 import os
+import subprocess
 import time
 
 from openai import OpenAI, RateLimitError
@@ -42,14 +44,70 @@ def _chat_with_anthropic(config: dict, messages: list[dict], temperature: float,
     return text
 
 
+def _chat_with_claude_cli(config: dict, messages: list[dict], temperature: float, max_tokens: int) -> str:
+    model = config.get("claude_cli_model", "")
+    logger.debug(f"LLM call → Claude CLI{' / ' + model if model else ''}")
+    t0 = time.time()
+
+    system = next((m["content"] for m in messages if m["role"] == "system"), None)
+    user_msgs = [m for m in messages if m["role"] != "system"]
+    prompt_text = "\n\n".join(f"{m['role'].upper()}:\n{m['content']}" for m in user_msgs)
+
+    # --strict-mcp-config suppresses all MCP servers in the subprocess; reduces ~27k context tokens
+    cmd = [
+        "claude", "--print", "--output-format", "json", "--tools", "",
+        "--mcp-config", '{"mcpServers":{}}', "--strict-mcp-config",
+        "--disable-slash-commands",
+    ]
+    if system:
+        cmd += ["--system-prompt", system]
+    if model:
+        cmd += ["--model", model]
+
+    try:
+        result = subprocess.run(
+            cmd,
+            input=prompt_text,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+    except FileNotFoundError:
+        raise RuntimeError(
+            "claude binary not found in PATH.\n"
+            "Install Claude Code from https://claude.ai/code and run 'claude auth login'."
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("claude CLI timed out after 300s.")
+
+    if result.returncode != 0:
+        raise RuntimeError(f"claude CLI exited {result.returncode}: {result.stderr.strip()}")
+
+    try:
+        events = json.loads(result.stdout)
+        result_event = next((e for e in events if e.get("type") == "result"), None)
+        if result_event is None:
+            raise KeyError("no 'result' event found in output")
+        text = result_event["result"]
+    except (json.JSONDecodeError, KeyError, TypeError) as e:
+        raise RuntimeError(f"claude CLI unexpected output ({e}): {result.stdout[:200]}")
+
+    elapsed = time.time() - t0
+    logger.debug(f"LLM response: {len(text)} chars in {elapsed:.1f}s via claude CLI")
+    return text
+
+
 def chat_with_llm(
     config: dict,
     messages: list[dict],
     temperature: float = 0.1,
     max_tokens: int = 4096,
 ) -> str:
-    if config.get("llm_provider") == "anthropic":
+    provider = config.get("llm_provider")
+    if provider == "anthropic":
         return _chat_with_anthropic(config, messages, temperature, max_tokens)
+    if provider == "claude_cli":
+        return _chat_with_claude_cli(config, messages, temperature, max_tokens)
     return chat_with_fallback(_make_openrouter_client(config), config, messages, temperature, max_tokens)
 
 

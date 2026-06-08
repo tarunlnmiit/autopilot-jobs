@@ -130,11 +130,11 @@ autopilot scan
 
 ### API keys needed
 
-| Service | Cost | Where to get it |
-|---|---|---|
-| **TinyFish** | **Free** — no credit card | [agent.tinyfish.ai](https://agent.tinyfish.ai) |
-| **OpenRouter** | **Free** — 4-model fallback chain | [openrouter.ai](https://openrouter.ai) |
-| **Telegram** | Free — optional | [@BotFather](https://t.me/BotFather) on Telegram |
+| Service | Cost | Required | Where to get it |
+|---|---|---|---|
+| **TinyFish** | **Free** — no credit card | Always | [agent.tinyfish.ai](https://agent.tinyfish.ai) |
+| **OpenRouter** | **Free** — 4-model fallback chain | Unless using Claude CLI / Anthropic | [openrouter.ai](https://openrouter.ai) |
+| **Telegram** | Free | Optional | [@BotFather](https://t.me/BotFather) on Telegram |
 
 ---
 
@@ -272,9 +272,30 @@ Uses a 4-model fallback chain — all free, no credit card needed:
 
 If one model hits its daily free-tier quota, the tool automatically tries the next. **Zero LLM cost by default.**
 
-### Alternative: Claude (Anthropic)
+### Alternative A: Claude Code CLI (no API key needed)
 
-If you have an Anthropic API key or Claude Pro:
+If you have [Claude Code](https://claude.ai/code) installed and authenticated, you can use it as the LLM backend — no separate API key required:
+
+In `config.json`:
+
+```json
+"llm_provider": "claude_cli"
+```
+
+Or via environment variable: `LLM_PROVIDER=claude_cli autopilot scan`
+
+Optionally set a model: `"claude_cli_model": "sonnet"` (or `"opus"`, `"haiku"`, empty = Claude's default).
+
+> **Note:** Requires the `claude` binary in your PATH. Verify with `claude --print "hi"` first.
+> The MCP server and cron jobs must run in an environment where your `claude` auth session is active.
+>
+> **Rate-limit note:** Each call loads your global Claude Code context (~25–30k tokens). A nightly scan
+> (5–15 LLM calls) burns significantly against your subscription's 7-day rate limit. Prefer OpenRouter
+> for nightly automation; use Claude CLI for occasional on-demand drafts.
+
+### Alternative B: Anthropic API
+
+If you have an Anthropic API key:
 
 ```bash
 pip install 'autopilot-jobhunt[claude]'
