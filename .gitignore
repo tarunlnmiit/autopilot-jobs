@@ -21,6 +21,10 @@ scan.log
 resume/*.md
 !resume/YOUR_RESUME.md
 
+# Demo source videos — heavy; commit the generated GIF only
+demo/*.mp4
+demo/*.mov
+
 # macOS
 .DS_Store
 

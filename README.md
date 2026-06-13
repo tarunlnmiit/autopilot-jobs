@@ -4,6 +4,9 @@
 
 > Scans 130+ company careers pages nightly → scores every role against your resume with an LLM → sends you the top matches on Telegram → drafts a tailored resume + cover letter on demand.
 
+<p align="center">
+  <img src="demo/autopilot-reel.gif" alt="autopilot-jobhunt demo — nightly scan, LLM scoring, Telegram alert, drafted application" width="300">
+</p>
 
 [![PyPI version](https://img.shields.io/pypi/v/autopilot-jobhunt)](https://pypi.org/project/autopilot-jobhunt/)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue)](https://www.python.org/)
@@ -11,6 +14,9 @@
 [![GitHub Stars](https://img.shields.io/github/stars/tarunlnmiit/autopilot-jobhunt?style=social)](https://github.com/tarunlnmiit/autopilot-jobhunt/stargazers)
 
 **[📖 Full setup guide with Claude Code MCP integration → SETUP.md](SETUP.md)**
+
+> ### ⭐ Star this repo if it helps you land a job
+> This tool is free, open source, and runs entirely on your machine — no subscription, no credit card. The only "payment" I ask: **if it surfaces a role you apply to (or land), drop a star.** It takes one click, costs you nothing, and it's the single thing that pushes the project in front of the next person grinding through 130 careers pages by hand. **[⭐ Star it here →](https://github.com/tarunlnmiit/autopilot-jobhunt/stargazers)**
 
 ---
 
