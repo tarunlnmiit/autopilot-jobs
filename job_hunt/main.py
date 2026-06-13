@@ -30,6 +30,16 @@ def _is_placeholder(val: str) -> bool:
     return val in _PLACEHOLDERS or val.startswith("YOUR_") or val.endswith("_HERE") or val.endswith("_here")
 
 
+def _use_env(val: str | None) -> bool:
+    """An env var overrides config.json only if it's set and not a placeholder.
+
+    Without the placeholder guard, the default `.env` template (which `autopilot
+    init` writes with `your_..._here` values) would clobber real keys in
+    config.json — the classic "config.json and .env don't compose" bug.
+    """
+    return bool(val) and not _is_placeholder(val)
+
+
 def load_config() -> dict:
     load_dotenv(dotenv_path=Path(".env"), override=True)
     p = Path("config.json")
@@ -45,11 +55,13 @@ def load_config() -> dict:
         "OPENROUTER_MODEL": "openrouter_model",
         "OPENROUTER_FALLBACK_MODELS": "openrouter_fallback_models",
         "CLAUDE_CLI_MODEL": "claude_cli_model",
+        "ANTHROPIC_API_KEY": "anthropic_api_key",
+        "ANTHROPIC_MODEL": "anthropic_model",
     }
 
     for env_key, config_key in env_mapping.items():
         val = os.getenv(env_key)
-        if val:
+        if _use_env(val):
             if env_key == "OPENROUTER_FALLBACK_MODELS":
                 config[config_key] = [m.strip() for m in val.split(",")]
             else:
@@ -63,8 +75,8 @@ def load_config() -> dict:
             "Get a key at https://agent.tinyfish.ai"
         )
 
-    tg_token = os.getenv("TELEGRAM_TOKEN")
-    tg_chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    tg_token = os.getenv("TELEGRAM_TOKEN") if _use_env(os.getenv("TELEGRAM_TOKEN")) else None
+    tg_chat_id = os.getenv("TELEGRAM_CHAT_ID") if _use_env(os.getenv("TELEGRAM_CHAT_ID")) else None
     if tg_token or tg_chat_id:
         if "telegram" not in config:
             config["telegram"] = {}
@@ -154,6 +166,25 @@ def _job_to_row(j: dict) -> dict:
     }
 
 
+def _parse_export_args(argv: list[str]) -> tuple[int, int]:
+    """Parse --min / --days flags for the export command. No API keys required."""
+    min_score = 0
+    days = 0
+    if "--min" in argv:
+        idx = argv.index("--min")
+        try:
+            min_score = int(argv[idx + 1])
+        except (IndexError, ValueError):
+            sys.exit("--min requires an integer, e.g. --min 60")
+    if "--days" in argv:
+        idx = argv.index("--days")
+        try:
+            days = int(argv[idx + 1])
+        except (IndexError, ValueError):
+            sys.exit("--days requires an integer, e.g. --days 7")
+    return min_score, days
+
+
 def export_jobs(min_score: int = 0, days: int = 0) -> None:
     if days > 0:
         if not JOB_HISTORY_FILE.exists():
@@ -203,6 +234,12 @@ def main() -> None:
         init_project()
         return
 
+    # export reads local scan state only — no API keys needed, so skip load_config()
+    if cmd == "export":
+        min_score, days = _parse_export_args(sys.argv)
+        export_jobs(min_score=min_score, days=days)
+        return
+
     config = load_config()
 
     if cmd == "scan":
@@ -214,23 +251,6 @@ def main() -> None:
             sys.exit("Usage: autopilot draft #N  or  autopilot draft URL")
         from job_hunt.drafter import draft_application
         draft_application(config, sys.argv[2])
-
-    elif cmd == "export":
-        min_score = 0
-        days = 0
-        if "--min" in sys.argv:
-            idx = sys.argv.index("--min")
-            try:
-                min_score = int(sys.argv[idx + 1])
-            except (IndexError, ValueError):
-                sys.exit("--min requires an integer, e.g. --min 60")
-        if "--days" in sys.argv:
-            idx = sys.argv.index("--days")
-            try:
-                days = int(sys.argv[idx + 1])
-            except (IndexError, ValueError):
-                sys.exit("--days requires an integer, e.g. --days 7")
-        export_jobs(min_score=min_score, days=days)
 
     else:
         sys.exit(f"Unknown command: {cmd}\nUse: scan | draft | export")
