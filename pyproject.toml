@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "autopilot-jobhunt"
-version = "0.3.1"
+version = "0.4.0"
 description = "AI-powered job scanner, scorer, and application drafter. Finds jobs while you sleep."
 readme = "README.md"
 license = { text = "MIT" }
