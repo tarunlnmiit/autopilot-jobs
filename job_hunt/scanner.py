@@ -339,7 +339,13 @@ def run_scan(config: dict, companies: list[dict]) -> None:
     logger.info(f"=== Scan started — {total} companies to check ===")
     logger.info(f"Candidate: {config.get('candidate', {}).get('name', 'unknown')}")
     logger.info(f"Min score: {config.get('candidate', {}).get('min_score', 55)} | Top N: {config.get('candidate', {}).get('top_n', 5)}")
-    logger.info(f"LLM provider: {config.get('llm_provider', 'openrouter')} | Model: {config.get('openrouter_model', 'default')}")
+    provider = config.get("llm_provider") or "openrouter"
+    model_by_provider = {
+        "openrouter": config.get("openrouter_model", "default"),
+        "anthropic": config.get("anthropic_model", "default"),
+        "claude_cli": config.get("claude_cli_model") or "claude default",
+    }
+    logger.info(f"LLM provider: {provider} | Model: {model_by_provider.get(provider, 'default')}")
 
     try:
         tf = TinyFish(api_key=config["tinyfish_api_key"])
@@ -451,28 +457,32 @@ def run_scan(config: dict, companies: list[dict]) -> None:
     tg = config.get("telegram", {})
     telegram_configured = bool(tg.get("token") and tg.get("chat_id"))
 
+    # Always persist results to CSV when there are scored jobs — this is the
+    # durable record regardless of whether Telegram is configured.
+    csv_path = _export_to_csv(all_scored_jobs, "scan results") if all_scored_jobs else None
+
     if errors and telegram_configured:
         error_msg = f"<b>Job Hunt Errors — {date_str}</b>\n" + "\n".join(errors)
         send_telegram(tg["token"], tg["chat_id"], error_msg)
 
     if not top_jobs:
         logger.info("No matching jobs found today.")
-        msg = f"<b>Job Hunt — {date_str}</b>\nNo new matches today."
         if telegram_configured:
+            msg = f"<b>Job Hunt — {date_str}</b>\nNo new matches today."
             send_telegram(tg["token"], tg["chat_id"], msg)
         return
 
     msg = format_telegram_message(top_jobs, date_str)
     logger.info("\n" + msg)
 
+    # Telegram is an optional notification on top of the CSV. When it's not
+    # configured we simply skip it — no error, the CSV already holds the results.
     if telegram_configured:
         sent = send_telegram(tg["token"], tg["chat_id"], msg)
         if sent:
-            logger.info("Telegram notification sent.")
+            logger.info(f"Telegram notification sent. Results also saved to CSV: {csv_path}")
         else:
-            logger.warning("Telegram send failed — exporting results to CSV as fallback.")
-            _export_to_csv(all_scored_jobs, "scan results")
+            logger.warning(f"Telegram send failed — results saved to CSV: {csv_path}")
     else:
-        logger.info("Telegram not configured — exporting results to CSV instead.")
-        _export_to_csv(all_scored_jobs, "scan results")
+        logger.info(f"Telegram not configured — results saved to CSV: {csv_path}")
         logger.info("Add telegram.token and telegram.chat_id to config.json to enable notifications.")
