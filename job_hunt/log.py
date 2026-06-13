@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -15,8 +16,11 @@ def get_logger(name: str = "autopilot") -> logging.Logger:
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
+    # Console level is INFO by default; set LOG_LEVEL=DEBUG for full per-URL/per-job
+    # detail on stdout (the scan.log file always captures DEBUG regardless).
+    console_level = getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO)
     console = logging.StreamHandler(sys.stdout)
-    console.setLevel(logging.INFO)
+    console.setLevel(console_level)
     console.setFormatter(fmt)
     logger.addHandler(console)
 

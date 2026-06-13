@@ -9,11 +9,17 @@ from job_hunt.log import get_logger
 
 logger = get_logger()
 
+# Per-request timeout (seconds) for HTTP-based LLM providers. Without this the
+# openai/anthropic SDKs default to 600s, so a single stalled free-tier model can
+# freeze a scan for 10 minutes. claude_cli has its own subprocess timeout (300s).
+_LLM_REQUEST_TIMEOUT = 120.0
+
 
 def _make_openrouter_client(config: dict) -> OpenAI:
     return OpenAI(
         api_key=config.get("openrouter_api_key") or os.getenv("OPENROUTER_API_KEY"),
         base_url="https://openrouter.ai/api/v1",
+        timeout=_LLM_REQUEST_TIMEOUT,
     )
 
 
@@ -26,7 +32,7 @@ def _chat_with_anthropic(config: dict, messages: list[dict], temperature: float,
     model = config.get("anthropic_model", "claude-haiku-4-5-20251001")
     logger.debug(f"LLM call → Anthropic / {model}")
     t0 = time.time()
-    client = anthropic.Anthropic(api_key=api_key)
+    client = anthropic.Anthropic(api_key=api_key, timeout=_LLM_REQUEST_TIMEOUT)
     system = next((m["content"] for m in messages if m["role"] == "system"), None)
     user_msgs = [m for m in messages if m["role"] != "system"]
     kwargs: dict = {
