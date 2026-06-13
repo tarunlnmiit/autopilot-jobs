@@ -305,7 +305,8 @@ TELEGRAM_CHAT_ID=your_numeric_chat_id_here
 
 ## Step 6 — Verify setup
 
-Run a smoke test that loads your config but makes **no API calls**:
+Run a smoke test that makes **no API calls** and needs **no API keys** —
+`export` only reads local scan state:
 
 ```bash
 autopilot export
@@ -313,10 +314,13 @@ autopilot export
 
 ✅ **Expected output (before first scan):**
 ```
-No scan results found. Run 'autopilot scan' first.
+No scan found. Run: autopilot scan
 ```
 
-If you see this, your install is working correctly — config loads, CLI is on your PATH, everything is wired up. The message just means you haven't run a scan yet.
+If you see this, your install is working correctly — the CLI is on your PATH,
+bundled data files are in place, everything is wired up. The message just means
+you haven't run a scan yet. (You do **not** need to fill in any API keys for this
+check to pass.)
 
 **After your first scan**, `autopilot export` produces a CSV like this:
 
